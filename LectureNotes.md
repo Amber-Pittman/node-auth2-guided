@@ -118,4 +118,56 @@
             hash(header + payload + secretString)
             ```
 
-    * Scroll down to the Debugger on the [JWT homepage](https://jwt.io/). You will see that we have an example of an encoded and decoded example of a JWT. If you change things in the payload, you will see the encoded JWT changes as well.
+    * Scroll down to the Debugger on the [JWT homepage](https://jwt.io/). You will see that we have an example of an encoded and decoded example of a JWT. 
+
+        * If you change things in the payload, you will see the encoded JWT changes as well.
+
+        * Now go down to the Verify Signature section and create a secretString.
+
+        * We can now use these tokens for authentication in a _stateless_ way. 
+
+9. The New Authentication Flow using Tokens (in place of sessions)
+
+    * The client sends the credentials to the server (the username and password from the Login endpoint)
+
+    * Server is going to verify those credentials (look up the user, check the password hash)
+
+    * Server generates a new JWT for the client
+
+    * Server sends back the JWT as a header
+
+    * The client stores the JWT in local storage
+
+    * Client then sends that JWT back up on every subsequent request.
+
+    * Server verifies the JWT is valid by checking the signature in the hash (no state is required)
+
+    * If the signature is valid, the server provides access to the resource. Otherwise it sends back an error code 
+
+10. Responsibilities of the Server and the Client in the AuthN Flow:
+    
+    * The responsibility of the _server_ in the AuthN Flow is to produce/generate the token, send it back to the client, read the token when it comes back, decode it and check the signature, and verify it.
+    
+    * It's the responsibility of the _client_ to store that token locally and send it back up on every request.
+
+11. The biggest difference now between having to lookup a session in memory/database to verify that user is authorized, we just have to validate the JWT signature. It does not require any kind of network request - just a quick, cryptographic check. And if the user is valid, we know the user was properly authenticated. 
+
+12. Drawbacks of Stateless Authentication - What's a potential problem of using JWTs instead of Sessions? 
+
+    * **_It's nearly impossible to log the user out._**
+
+        * We're not storing anything on the server side (nothing in the database or the memory). We're not storing any sessions anywhere. Once we issue that token - once we generate it and send it back - that user is logged in and we don't have any way to force them to log out.
+
+        * A Couple Ways to Overcome this Drawback:
+            
+            * As a way to help with this drawback, we can give JWT expiration dates. 
+            
+            * Or you could use a method to create a "blacklist" of all the logged out tokens in your database and check against that list to see if anyone's logged out with that specific token. 
+
+            * Or you can use JWTs _alongside_ sessions at the same time. Then use the JWT to store the session.
+
+```
+Stopping Point on Video, just after 5 minute break 
+
+46:26
+```
