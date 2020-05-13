@@ -170,7 +170,7 @@ Implement a JWT in our API
 
 ### AuthN Flow - Authentication Flow
 
-The client sends the credentials to the server (the username and password from the Login endpoint). Server is going to verify those credentials (look up the user, check the password hash). Server generates a new JWT for the client. Server sends back the JWT as a header
+The client sends the credentials to the server (the username and password from the Login endpoint). Server is going to verify those credentials (look up the user, check the password hash). Server generates a new JWT for the client. Server sends back the JWT as a header.
 
 1. Install JSON Web Token `npm install jsonwebtoken`
 
@@ -301,7 +301,7 @@ The client sends the credentials to the server (the username and password from t
 
 ### AuthZ Flow - Authorization Flow
 
-Client then sends that JWT back up on every subsequent request. Server verifies the JWT is valid by checking the signature in the hash (no state is required). If the signature is valid, the server provides access to the resource. Otherwise it sends back an error code 
+Client then sends that JWT back up on every subsequent request. Server verifies the JWT is valid by checking the signature in the hash (no state is required). If the signature is valid, the server provides access to the resource. Otherwise it sends back an error code.
 
 1. Let's make the users endpoint be the restricted route. Only logged in users can call this endpoint. We're calling the restrict middleware.
 
@@ -356,8 +356,6 @@ Client then sends that JWT back up on every subsequent request. Server verifies 
 
     * You should get a 401 Unauthorized message because the server recognized that you changed that token. It recognized that it was altered and something wasn't right. It's not going to let you through all without looking anything up. It's all stateless.
 
-
-
     ```
     const jwt = require("jsonwebtoken")
 
@@ -368,6 +366,106 @@ Client then sends that JWT back up on every subsequent request. Server verifies 
         } -->
                     //req.headers.whateverTheNameOfTheHeaderIs
         const token = req.headers.authorization
+        if (!token) {
+            return res.status(401).json(authError)
+        }
+
+        jwt.verify(
+            token, 
+            process.env.JWT_SECRET, 
+            function(err, decodedPayload) => {
+                if (err) {
+                    return res.status(401).json(authError)
+                } 
+
+                req.token = decodedPayload
+                next()
+            })
+      } catch(err) {
+        next(err)
+    }
+    ```
+
+8. It's kind of tedious to send that header manually every time we need to call a protected endpoint. To make it a bit more automatic, we can use cookies. Cookies _do not_ have to be used in conjunction with sessions. Cookies can be used for anything. 
+
+    Let's combine cookies with JWTs so that when the user logs in, we set a new cookie with the token inside of it. That way, the client will automatically send it up if it has it. You won't manually have to set that authorization header anymore.
+
+    * Go back into the auth-router. Right before res.json, let's send `res.cookie()` and give it a name. We'll use "token". Then assign the `jwt.sign()` as the value of that cookie.
+
+    `res.cookie("token", jwt.sign(tokenPayload, process.env.JWT_SECRET))`
+
+    * Again, we don't have to use cookie in the context of sessions. They can be used on their own to store data and send data from the client. 
+
+    * Now, when we're generating the token, we're telling the server to send it back as a cookie. The client is going to see that cookie and set it in its cookie jar. It's going to save that data.
+
+    * SIDE NOTE: In Insomnia, next to the Environment setting, is an option to click on Cookies. If you do click on it, you will see your cookie jar and its collection of cookies.
+    
+    * Make the login request again. You'll see we're no longer seeing the token in the response body. Your cookie jar will now get another cookie automatically because the header told it to do that. 
+
+    * Before we do anything else, log out the headers in the restrict middleware just before the const token. Let's see what headers exist when that gets sent. Then in Insomnia, make a request to Get Users. 
+
+        * You'll see we get a 401 Unauthorized status even though we're sending a token.
+
+        * If you look in the terminal's console, check out what got logged in the terminal. These are the headers being sent:
+
+            * Host - the user-agent is Insomnia
+
+            * Cookie - provides a token cookie and a session cookie (in this instance)
+
+            * Authorization key
+
+            * Accept
+
+    * We can take the cookie header and parse the token value out of it to use in our strict middleware instead of the manual authorization header. We _could_ extract the cookie token manually using a regex to split it up somehow. Instead, we're going to install the cookie-parser library that does it for us. `npm install cookie-parser`
+
+        * If you look in the [cookie-parser documentation](https://www.npmjs.com/package/cookie-parser#api), you just install it as middleware and then we can call `req.cookies` on any of our endpoints to get values of specific cookies from our cookie jar instead of everything all at once.
+
+        * Since we're no longer using sessions, comment out the sessions part.
+
+    * In the restrict file, instead of getting that token from the manual authorization header, we'll now call `const token = req.cookies.token`. That will get the value that is automatically sent up.
+
+    * Try calling get users again after you save the restrict file. It should let you through with a 200 OK status. It will return the list of all the users created.
+
+    * Now, delete the cookie(s) from the cookie jar and delete the manual header of Authorization. When you try to Get Users again, you get the 401 Unauthorized message. Go login in again then run Get Users. You can get in to see all the users and the cookie jar now has a cookie in it.
+
+    ```
+    // index \\
+    
+    const cookieParser = require("cookie-parser")
+
+    server.use(cookieParser())
+    // server.use(session({
+    // 	name: "sess", // overwrites the default cookie name, hides our stack better
+    // 	resave: false, // avoid recreating sessions that have not changed
+    // 	saveUninitialized: false, // GDPR laws against setting cookies automatically
+    // 	secret: "keep it secret, keep it safe", // cryptographically sign the cookie
+    // }))
+
+
+    // auth-router \\
+
+    const tokenPayload = {
+			userId: user.id,
+			userRole: "admin",
+		}
+
+    res.cookie("token", jwt.sign(tokenPayload, process.env.JWT_SECRET))
+
+    res.json({
+        message: `Welcome ${user.username}!`,
+    })
+
+
+    // restrict \\
+
+    const jwt = require("jsonwebtoken")
+    
+    try {
+        <!-- if (!req.session || !req.session.user) {
+            return res.status(401).json(authError)
+        } -->
+         
+        const token = req.cookies.token
         if (!token) {
             return res.status(401).json(authError)
         }

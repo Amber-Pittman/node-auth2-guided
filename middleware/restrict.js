@@ -13,8 +13,10 @@ function restrict() {
 			// 	return res.status(401).json(authError)
 			// }
 
-			            //req.headers.whateverTheNameOfTheHeaderIs
-			const token = req.headers.authorization
+			console.log(req.headers)
+			              //req.headers.whateverTheNameOfTheHeaderIsItCouldBeCalledHello
+			//const token = req.headers.authorization
+			const token = req.cookies.token
 			if (!token) {
 				return res.status(401).json(authError)
 			}
@@ -26,14 +28,13 @@ function restrict() {
 					if (err) {
 						return res.status(401).json(authError)
 					} 
-	
-					req.token = decodedPayload
-					next()
-				})
-			} catch(err) {
-				next(err)
-			}
+				req.token = decodedPayload
+				next()
+			})
+		} catch(err) {
+			next(err)
 		}
 	}
+}
 
 module.exports = restrict
