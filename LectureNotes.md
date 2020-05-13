@@ -461,10 +461,6 @@ Client then sends that JWT back up on every subsequent request. Server verifies 
     const jwt = require("jsonwebtoken")
     
     try {
-        <!-- if (!req.session || !req.session.user) {
-            return res.status(401).json(authError)
-        } -->
-         
         const token = req.cookies.token
         if (!token) {
             return res.status(401).json(authError)
@@ -485,3 +481,72 @@ Client then sends that JWT back up on every subsequent request. Server verifies 
         next(err)
     }
     ```
+
+9. Alter the restrict middleware so it checks the user role defined in the JWT (such as normal or admin). Then update GET /users to only allow admin access. 
+
+    * Look in the users router. We want to call restrict with certain access levels. If we want to restrict this endpoint to allow only admins, we would want to be able to send through "admin" for example.
+
+    * Implement the user router's restrict in the restrict middleware by going to the definition of the function and define the parameter. We'll use "role" here.
+
+    * Give the role a default value of normal. If no role is specified, it will default to normal.
+
+    * Now we just have to check for the role that we're given in the function and compare it to the role that we have when we decode the payload (in the verify method). 
+
+        * If the error is not empty _or_ if the decodedPayload.userRole is different than the role we're specifying, then return a 401.
+
+        * We can trust the decodedPayload.userRole value because of the token signature. If that signature is valid, it hasn't been tampered with. And, if it hasn't been tampered with & the role matches what we're specifying in the function, we're good to go.
+
+    * Save both files and then restart the server. Make a request to Get Users. You'll get a 401 Unauthorized status. 
+
+        * Even though we're authorized, we're authorized as a normal user and not an admin. Therefore, it's not going to let us through.
+
+    * Go to the auth-router and change the role from "normal" to "admin." Remember, this role normally comes from a database. Since we're just hardcoding it, for now, let's just change it to "admin." We're going to pretend that the user is logging in as an admin. Now go log back in then run Get Users again.
+
+    * We can store any type of information we want in the payload; anything that might be useful - anything in that store when we assign the token. If the token comes back and the signature matches, we can trust any of that information in the payload without having to do any database lookups. **_This is stateless right here._**
+
+    ```
+    // users-router \\
+
+    router.get("/", restrict("admin"), async (req, res, next) => {...}
+
+
+    // restrict \\
+
+    function restrict(role = "normal") {
+        // const
+        // if statement
+        jwt.verify(
+                    token, 
+                    process.env.JWT_SECRET, 
+                    (err, decodedPayload) => {
+                        if (err  || decodedPayload.userRole !== role) {
+                            return res.status(401).json(authError)
+                        } 
+                    req.token = decodedPayload
+                    next()
+                })
+        // catch
+    }
+
+
+    // auth-router \\
+
+    // GENERATE A NEW TOKEN
+    const tokenPayload = {
+        userId: user.id,
+        userRole: "admin", // this would normally come from the database
+    }
+    ```
+
+10. If we wanted to make this a little more complex, like we specified "normal" in the users-router. 
+
+    * If we were logged in as an admin, we wouldn't be able to access this because your "normal" is passed in. 
+    
+    * Instead of specifying a specific role, you'd want to have scales. You'd want the admin to have access to normal resources but not the other way around. 
+
+    * If you wanted to do that, you'd have to get tricky with how you define the role parameter in the restrict function and how you'd check it. Maybe you have the role and you're checking against an array and you're checking in the index to make sure that the index is below the number that you expect. 
+
+    * This is beyond the scope of the lecture but it's something to look into if you'd like to pursue this. 
+
+
+### DONE!

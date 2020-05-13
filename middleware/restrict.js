@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken")
 
-function restrict() {
+function restrict(role = "normal") {
 	return async (req, res, next) => {
 		const authError = {
 			message: "Invalid credentials",
@@ -25,7 +25,7 @@ function restrict() {
 				token, 
 				process.env.JWT_SECRET, 
 				(err, decodedPayload) => {
-					if (err) {
+					if (err  || decodedPayload.userRole !== role) {
 						return res.status(401).json(authError)
 					} 
 				req.token = decodedPayload
