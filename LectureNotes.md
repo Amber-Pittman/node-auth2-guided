@@ -169,6 +169,7 @@
 Implement a JWT in our API
 
 ### AuthN Flow - Authentication Flow
+
 The client sends the credentials to the server (the username and password from the Login endpoint). Server is going to verify those credentials (look up the user, check the password hash). Server generates a new JWT for the client. Server sends back the JWT as a header
 
 1. Install JSON Web Token `npm install jsonwebtoken`
@@ -228,6 +229,7 @@ The client sends the credentials to the server (the username and password from t
     ```
 
     * **SIDE NOTE ON THE SECRET STRING**
+
         Let's talk about the secret string for a minute. Why do we have to use a secret string when we sign a token, when we sign a payload? Why is that secret string important?
 
         If we knew what the secret string was used to sign the token in the first place, and we changed something in the token, we would have been able to resign it. 
@@ -298,6 +300,43 @@ The client sends the credentials to the server (the username and password from t
     ```
 
 ### AuthZ Flow - Authorization Flow
-The client stores the JWT in local storage. Client then sends that JWT back up on every subsequent request.
 
-1. 
+Client then sends that JWT back up on every subsequent request. Server verifies the JWT is valid by checking the signature in the hash (no state is required). If the signature is valid, the server provides access to the resource. Otherwise it sends back an error code 
+
+1. Let's make the users endpoint be the restricted route. Only logged in users can call this endpoint. We're calling the restrict middleware.
+
+2. Look at the restrict middleware. Currently, it's just checking the session. Let's update this to use tokens instead of sessions. Comment out the if statement. 
+
+3. Import the JWT library. `const jwt = require("jsonwebtoken")`
+
+4. Validate the token in this middleware
+
+    * Get the token from header called authorization, where the actual token value is going to come from
+
+    * Right off the bat, if we know the client didn't send a token, we need to return an error. There's no point in trying to validate the token if it doesn't exist. 
+
+        * If the token is undefined and we don't have that header, return a status of 401 with our authError. You're not authorized if you did not send a token.
+
+    * By this point we know we have a token. The client sent a JWT as a header. We need to verify it and check the signature to make sure it's never been tampered with. Make sure the token actually validates. 
+
+        * If you look in the documentation, you'll see we have another function called `[.verify()]`(https://www.npmjs.com/package/jsonwebtoken#jwtverifytoken-secretorpublickey-options-callback)
+
+    ```
+    const jwt = require("jsonwebtoken")
+
+    
+    try {
+        <!-- if (!req.session || !req.session.user) {
+            return res.status(401).json(authError)
+        } -->
+
+        const token = req.headers.authorization
+        if (!token) {
+            return res.status(401).json(authError)
+        }
+
+        next()
+      } catch(err) {
+        next(err)
+    }
+    ```
