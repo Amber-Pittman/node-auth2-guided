@@ -170,6 +170,8 @@
 Implement a JWT in our API
 
 ### AuthN Flow - Authentication Flow
+<br>
+The client sends the credentials to the server (the username and password from the Login endpoint). Server is going to verify those credentials (look up the user, check the password hash). Server generates a new JWT for the client. Server sends back the JWT as a header
 
 1. Install JSON Web Token `npm install jsonwebtoken`
 
@@ -297,5 +299,7 @@ Implement a JWT in our API
     ```
 
 ### AuthZ Flow - Authorization Flow
+<br>
+The client stores the JWT in local storage. Client then sends that JWT back up on every subsequent request.
 
 1. 
