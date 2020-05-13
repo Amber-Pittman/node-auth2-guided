@@ -166,8 +166,136 @@
 
             * Or you can use JWTs _alongside_ sessions at the same time. Then use the JWT to store the session.
 
-```
-Stopping Point on Video, just after 5 minute break 
+## Code Along!
+Implement a JWT in our API
 
-46:26
-```
+### AuthN Flow - Authentication Flow
+
+1. Install JSON Web Token `npm install jsonwebtoken`
+
+2. Import it into auth-router as `jwt`.
+
+3. Go to the Login endpoint in auth-router.
+
+4. When the user logs in, we're going to keep this same logic of getting the user by the database by the username and making sure they exist. We still want to validate the password/hash. 
+
+5. At this point when we were creating a user session before (`req.session.user = user`), we no longer have to do that. Comment it out.
+
+6. Create our payload after the password comparison code. Remember it is PUBLIC. So maybe you only want to use the user's ID here and maybe their role.
+
+    * Since we don't actually have the userRole value in the database, we're going to fake it. We're going to fake it by adding a userRole and set it to normal or admin. This would normally come from the database.
+
+7. Now we're going to actually generate a token with that payload. Create a new variable called `token`. If you look in the [documentation for the jsonwebtoken library](https://www.npmjs.com/package/jsonwebtoken#usage), you'll see that you can call `jwt.sign` with payload and a secret key. It's going to create that token for us.
+
+    * It'll automatically create the header, automatically sign it, create that hash, automatically base64 everything... we just have to call that one function. 
+
+8. Send it back to the client as part of the response body. `token: token,`
+
+    * You could actually use the value from the token variable and replace the token value then get rid of the token variable above it.
+
+9. Test to see if it works in Insomnia by making a request to register and then to login. 
+
+    * Register `POST http://localhost:5000/auth/register`
+
+    * Login `http://localhost:5000/auth/login`
+
+10. After registering and logging in, we get a welcome message and a hashed token. 
+
+    * Copy that token. 
+    
+    * Now, go back to the [JWT Encoded/Decoded page](https://jwt.io/) and insert the token (without quotes). 
+
+        * It set the algorithm type to HS256 (the algo used to sign it) and set the type to JWT. 
+        
+        * It also set our userId and userRole in the payload. There's also an `iat` value, which stands for "issued at:". It's just at timestamp of when the token was created. 
+
+        
+    ```
+    // GENERATE A NEW TOKEN
+
+    const tokenPayload = {
+        "userId": "user.id",
+        "userRole": "normal", // this would normally come from the DB
+    }
+
+    //const token = jwt.sign(tokenPayload, "keep it secret, keep it safe") 
+
+    res.json({
+        message: `Welcome ${user.username}!`,
+        //token: token,
+        token: jwt.sign(tokenPayload, "keep it secret, keep it safe")
+    })
+    ```
+
+    * **SIDE NOTE ON THE SECRET STRING**
+    <br>
+    Let's talk about the secret string for a minute. Why do we have to use a secret string when we sign a token, when we sign a payload? Why is that secret string important?
+
+    If we knew what the secret string was used to sign the token in the first place, and we changed something in the token, we would have been able to resign it. 
+
+    Since the signature is a combination of the header, the payload, and the secret string, if we knew what that secret string was, we'd be able to change anything in the payload and then resign it again with the secret string and it would be considered valid. 
+
+    That secret string is what keeps our token secure. It prevents people from changing our token and resigning it. It's what keeps that payload data safe and unchanged.
+
+    If you remember from our deployment lecture, what do we never want to do with secret values/strings? We never want them in our source code and deploy our repo to GitHub. We never want to hardcode them. How do we take the secret string out of our source code? Environment variables. 
+
+11. Take the secret string out of our source code with Environment variables.
+
+    * Install dotenv as a devDependency `npm install -D dotenv || npm install --save-dev dotenv`
+
+    * Create a .env file in the root of our project.
+
+    * Inside the new file, let's put a value for JWT_SECRET and set the value to our secret string.
+
+    * Options to Read all the values in the .env file
+
+        * Go into our package.json file. 
+            
+            * In our server script, add in `-r dotenv/config`. This will instruct dotenv to read our .env file. <br>
+
+                `"server": "nodemon -r dotenv/config index.js",`
+
+            * This version keeps all our environment variables and all of the configuration completely separate from our codebase so we could easily change environments without having to worry about how the variables are actually set.
+
+        * In index, you could require dotenv.config and it will do the same as what we did in the package.json file
+
+            * `require("dotenv").config`
+
+            * You only have to call it once, which is why we put it in the index file. No need to require it on other files. As long as it gets called once, it will read in all those values.
+
+    * Now that we're bringing in our .env file in place of the hardcoded string on the auth-router, we can now say `process.env.JWT_SECRET` on the token.
+
+    * Test on Insomnia by trying to call Login. You should get a token.
+
+    ```
+    // .env
+
+    JWT_SECRET="keep it secret, keep it safe"
+
+
+    // Make dotenv read the .env file
+    // package.json
+
+    "scripts": {
+		"server": "nodemon -r dotenv/config index.js",
+		"start": "node index.js"
+	},
+
+
+    // auth-router //
+
+    // GENERATE A NEW TOKEN
+    const tokenPayload = {
+        "userId": "user.id",
+        "userRole": "normal", // this would normally come from the DB
+    }
+
+    res.json({
+        message: `Welcome ${user.username}!`,
+        token: jwt.sign(tokenPayload, process.env.JWT_SECRET)
+    })
+    ```
+
+### AuthZ Flow - Authorization Flow
+
+1. 
