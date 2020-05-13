@@ -319,7 +319,44 @@ Client then sends that JWT back up on every subsequent request. Server verifies 
 
     * By this point we know we have a token. The client sent a JWT as a header. We need to verify it and check the signature to make sure it's never been tampered with. Make sure the token actually validates. 
 
-        * If you look in the documentation, you'll see we have another function called `[.verify()]`(https://www.npmjs.com/package/jsonwebtoken#jwtverifytoken-secretorpublickey-options-callback)
+        * If you look in the documentation, you'll see we have another function called [jwt.verify()](https://www.npmjs.com/package/jsonwebtoken#jwtverifytoken-secretorpublickey-options-callback). We can pass an existing token and a secret key. It will tell us if it's valid or not by checking that signature.
+
+        * Call it after the if statement. Pass in the `token` as the first param and then the secret key. The _third param_ is a callback function with 2 params itself - an error if there is an error and a decoded version of our payload. You can name the param whatever you want here.
+
+        * Looking in the documentation again, look at the example of the invalid token. If the token is undefined then you can assume that the token is not validated. Something has been changed or isn't right.
+
+        * If the value is not undefined, we can return that authError with a 401 status. 
+
+        * But if the error is undefined and we make it to this point, we can assume they are validated. Just move on to the next piece of middleware by calling next. We only call next if that token verifies.
+
+5. Maybe in later middleware functions or the actual endpoints or the actual route handlers, we may want to access some of that data that's in the payload. How would we attach that to the request so that we could use it later? `req.token = decodedPayload`.
+
+    * At that point, if you need to access anything from that payload in a later middleware function or route handler, you can just call it from req.token.
+
+    * Maybe you do actually need to look up the user in the database, then you can get the ID from that object.
+
+6. Test on Insomnia by trying to call Login and then Users to send that token as a header to see if it works. When you send your request to Users, you'll get an error message because you didn't send anything to users. 
+
+    * You can fix this error message by sending your Login token as a header in the get request. In the Header tab, set the header as `Authorization` and where it says `New value`, you paste in your token.
+
+    * Run the Get request again. You should now get a 200 status with your ID and Username.
+
+    <p align="center">
+        <img src="images/Insomnia-AuthHeaderTokenValue.PNG" alt="Screenshot of Insomnia's Authorization Header with a Token as the value. The preview on the right side shows a 200 HTTP status and the ID and username of a user." data-pin-nopin="true" width=750 /> 
+    </p>
+    
+
+7. Let's try something interesting. 
+
+    * Copy the token and go to the [JWT Encoder/Decoder](https://jwt.io/) again. Paste the token into the Encoder. 
+    
+    * Change the userRole to "admin."
+
+    * Copy the new token and paste into the Insomnia header. 
+
+    * You should get a 401 Unauthorized message because the server recognized that you changed that token. It recognized that it was altered and something wasn't right. It's not going to let you through all without looking anything up. It's all stateless.
+
+
 
     ```
     const jwt = require("jsonwebtoken")
@@ -329,13 +366,23 @@ Client then sends that JWT back up on every subsequent request. Server verifies 
         <!-- if (!req.session || !req.session.user) {
             return res.status(401).json(authError)
         } -->
-
+                    //req.headers.whateverTheNameOfTheHeaderIs
         const token = req.headers.authorization
         if (!token) {
             return res.status(401).json(authError)
         }
 
-        next()
+        jwt.verify(
+            token, 
+            process.env.JWT_SECRET, 
+            function(err, decodedPayload) => {
+                if (err) {
+                    return res.status(401).json(authError)
+                } 
+
+                req.token = decodedPayload
+                next()
+            })
       } catch(err) {
         next(err)
     }

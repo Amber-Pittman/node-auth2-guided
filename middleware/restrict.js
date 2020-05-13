@@ -13,16 +13,27 @@ function restrict() {
 			// 	return res.status(401).json(authError)
 			// }
 
+			            //req.headers.whateverTheNameOfTheHeaderIs
 			const token = req.headers.authorization
 			if (!token) {
 				return res.status(401).json(authError)
 			}
 
-			next()
-		} catch(err) {
-			next(err)
+			jwt.verify(
+				token, 
+				process.env.JWT_SECRET, 
+				(err, decodedPayload) => {
+					if (err) {
+						return res.status(401).json(authError)
+					} 
+	
+					req.token = decodedPayload
+					next()
+				})
+			} catch(err) {
+				next(err)
+			}
 		}
 	}
-}
 
 module.exports = restrict
