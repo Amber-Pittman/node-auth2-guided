@@ -47,7 +47,6 @@
     * The `req.session.user = user` line in auth-router is just creating a new session using Express-Session. We just assign to that object.
 
 6. How to Create an AuthZ Flow? 
-    <br>    
     If we have an endpoint that we want to protect and only allow logged in users access to this endpoint, how do we create that authorization flow?
 
     * Take a look in users-router. We have an endpoint that is restricted to logged in users. We're just using some middleware. 
@@ -170,7 +169,6 @@
 Implement a JWT in our API
 
 ### AuthN Flow - Authentication Flow
-<br>
 The client sends the credentials to the server (the username and password from the Login endpoint). Server is going to verify those credentials (look up the user, check the password hash). Server generates a new JWT for the client. Server sends back the JWT as a header
 
 1. Install JSON Web Token `npm install jsonwebtoken`
@@ -230,16 +228,15 @@ The client sends the credentials to the server (the username and password from t
     ```
 
     * **SIDE NOTE ON THE SECRET STRING**
-    <br>
-    Let's talk about the secret string for a minute. Why do we have to use a secret string when we sign a token, when we sign a payload? Why is that secret string important?
+        Let's talk about the secret string for a minute. Why do we have to use a secret string when we sign a token, when we sign a payload? Why is that secret string important?
 
-    If we knew what the secret string was used to sign the token in the first place, and we changed something in the token, we would have been able to resign it. 
+        If we knew what the secret string was used to sign the token in the first place, and we changed something in the token, we would have been able to resign it. 
 
-    Since the signature is a combination of the header, the payload, and the secret string, if we knew what that secret string was, we'd be able to change anything in the payload and then resign it again with the secret string and it would be considered valid. 
+        Since the signature is a combination of the header, the payload, and the secret string, if we knew what that secret string was, we'd be able to change anything in the payload and then resign it again with the secret string and it would be considered valid. 
 
-    That secret string is what keeps our token secure. It prevents people from changing our token and resigning it. It's what keeps that payload data safe and unchanged.
+        That secret string is what keeps our token secure. It prevents people from changing our token and resigning it. It's what keeps that payload data safe and unchanged.
 
-    If you remember from our deployment lecture, what do we never want to do with secret values/strings? We never want them in our source code and deploy our repo to GitHub. We never want to hardcode them. How do we take the secret string out of our source code? Environment variables. 
+        If you remember from our deployment lecture, what do we never want to do with secret values/strings? We never want them in our source code and deploy our repo to GitHub. We never want to hardcode them. How do we take the secret string out of our source code? Environment variables. 
 
 11. Take the secret string out of our source code with Environment variables.
 
@@ -270,23 +267,25 @@ The client sends the credentials to the server (the username and password from t
     * Test on Insomnia by trying to call Login. You should get a token.
 
     ```
-    // .env
+    // .env \\
 
     JWT_SECRET="keep it secret, keep it safe"
 
 
-    // Make dotenv read the .env file
-    // package.json
+
+    // package.json \\
 
     "scripts": {
-		"server": "nodemon -r dotenv/config index.js",
+        // Make dotenv read the .env file
+		"server": "nodemon -r dotenv/config index.js", 
 		"start": "node index.js"
 	},
 
 
-    // auth-router //
 
-    // GENERATE A NEW TOKEN
+    // auth-router \\
+
+    // generate a new token
     const tokenPayload = {
         "userId": "user.id",
         "userRole": "normal", // this would normally come from the DB
@@ -299,7 +298,6 @@ The client sends the credentials to the server (the username and password from t
     ```
 
 ### AuthZ Flow - Authorization Flow
-<br>
 The client stores the JWT in local storage. Client then sends that JWT back up on every subsequent request.
 
 1. 
